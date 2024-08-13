@@ -125,7 +125,7 @@ class DetectCategory:
         self.recording_flag: bool = False
 
     def get_fps(self, speed: dict):
-        print(1000/sum(speed.values()))
+        print(f"FPS: {1000/sum(speed.values())}")
 
     def draw_boxes_on_frame_v8(self, results, frame):
         if not len(results):
