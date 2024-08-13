@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import time
 import os
+import re
 from fastapi import FastAPI, Response
 from fastapi.responses import StreamingResponse
 from PIL import Image
@@ -46,16 +47,23 @@ category_maper = {
     16: "dog",
 }
 
+REGEX_MODEL_NUM = re.compile("(?P<model_num>[0-9]+)")
 # VENV
+MODEL_TYPE = os.getenv("model_type".upper(), "yolov8s")
 # region LOGGER
 OUTPUT_LOG_PATH: str | bool = os.getenv("output_log_path".upper(), False)
+model_num = re.search(REGEX_MODEL_NUM, MODEL_TYPE).group("model_num")
 logger = LogginModule(
-    app_name="yolov5_app", output_logging_file_name=OUTPUT_LOG_PATH, level=logging.DEBUG
+    app_name=f"yolov{model_num}_app",
+    output_logging_file_name=OUTPUT_LOG_PATH,
+    level=logging.DEBUG,
 ).get_logger()
 logger.info("Starting!!")
 # endregion
 
 DEBUG: bool = bool(os.getenv("debug".upper(), False))
+if DEBUG:
+    logger.info(f"Debug on: {DEBUG}.")
 RECORD_VIDEO: bool = bool(os.getenv("record_video".upper(), False))
 logger.info(f"Record Video: {RECORD_VIDEO}")
 # region DEVICE
@@ -69,7 +77,6 @@ else:
 logger.info(f"Device detected: {device}")
 # endregion
 # region MODEL
-MODEL_TYPE = os.getenv("model_type".upper(), "yolov8s")
 CONFIDENCE_THRESHOLD: float = float(os.getenv("conf_threshold".upper(), 0.5))
 logger.info(
     f"Seted model: {MODEL_TYPE}.Seted confidence threshold: {CONFIDENCE_THRESHOLD}. {type(CONFIDENCE_THRESHOLD)}"
@@ -117,19 +124,12 @@ class DetectCategory:
         self.video_writer: cv2.VideoWriter = None
         self.recording_flag: bool = False
 
-    def get_fps(
-        self,
-    ):
-        if self.fps_elapsed_time >= 1.0:
-            fps = self.frame_counter / self.fps_elapsed_time
-            print(f"FPS: {fps}")
-            self.frame_counter = 0
-            self.fps_start_time = time.time()
+    def get_fps(self, speed: dict):
+        print(1000/sum(speed.values()))
 
     def draw_boxes_on_frame_v8(self, results, frame):
         if not len(results):
             return
-        # np.array(results.xyxy[0].tolist())
         if GPU_ON:
             boxes = results.boxes.xyxy.cpu()
             confidences = results.boxes.conf.cpu()
@@ -236,13 +236,6 @@ class DetectCategory:
         while True:
             success, frame = cap.read()
 
-            # region for fps
-            if SHOW_FPS:
-                self.frame_counter += 1
-                self.fps_elapsed_time = time.time() - self.fps_start_time
-                self.get_fps()
-            # endregion
-
             if not success:
                 return Response("Failed to capture image", status_code=500)
 
@@ -255,18 +248,25 @@ class DetectCategory:
                 conf=CONFIDENCE_THRESHOLD,
                 verbose=False,
                 device=device if GPU_ON else "cpu",
+                imgsz=640,
+                half=True,
             )
+
             results = next(iter(results))
+
+            # region for fps
+            if SHOW_FPS:
+                self.frame_counter += 1
+                self.fps_elapsed_time = time.time() - self.fps_start_time
+                self.get_fps(results.speed)
+            # endregion
 
             if RECORD_VIDEO and DRAW_BOXES:
                 self.draw_boxes_on_frame_v8(frame=frame, results=results)
 
             is_detected = False
             if CATEGORIES_TO_SEARCH:
-                # if not GPU_ON:
-                #     predictions = results.xyxy[0].numpy()
-                # else:
-                #     predictions = np.array(results.xyxy[0].tolist())
+
                 is_detected, category_name = self.category_is_detected(
                     results, CATEGORIES_TO_SEARCH
                 )
