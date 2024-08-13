@@ -1,5 +1,8 @@
 FROM ultralytics/yolov5:latest
 
+
+WORKDIR /usr/src/app
+
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 
@@ -23,7 +26,7 @@ ARG VIDEO=test_video.mp4
 ARG CAMERA=""
 
 # env for model
-ENV MODEL_TYPE=yolov8m
+ENV MODEL_TYPE=yolov10m
 ENV CAMERA_ADDR=$CAMERA
 ENV VIDEO_FROM_PATH=$VIDEO
 ENV RECORD_VIDEO=True
@@ -35,7 +38,7 @@ ENV SHOW_FPS=True
 ENV GPU_ON=$GPU_ON
 ENV CONF_THRESHOLD=0.6
 # ENV DEBUG=True
-ENV OUTPUT_LOG_PATH=/workspace
+ENV OUTPUT_LOG_PATH=/usr/src/app
 
 
 # Expose the port the app runs on
