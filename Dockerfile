@@ -1,7 +1,7 @@
 FROM ultralytics/yolov5:latest
 
-
-WORKDIR /usr/src/app
+ENV WORKDIR=/usr/src/app
+WORKDIR $WORKDIR
 
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
@@ -38,7 +38,13 @@ ENV SHOW_FPS=True
 ENV GPU_ON=$GPU_ON
 ENV CONF_THRESHOLD=0.6
 # ENV DEBUG=True
-ENV OUTPUT_LOG_PATH=/usr/src/app
+ENV OUTPUT_LOG_PATH=$WORKDIR
+
+RUN mkdir -p $WORKDIR/videos
+
+ENV SAVED_VIDEOS=$WORKDIR/videos
+
+
 
 
 # Expose the port the app runs on

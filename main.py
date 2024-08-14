@@ -110,6 +110,7 @@ if categories_as_str:
     logger.info(f"Category to detect: {category_mgs}.")
 # endregion
 SHOW_FPS: bool = bool(os.getenv("SHOW_FPS", False))
+SAVED_VIDEOS = os.getenv("SAVED_VIDEOS")
 
 # model
 model = YOLO(MODEL_TYPE)
@@ -163,6 +164,8 @@ class DetectCategory:
     def initialize_video_writer(
         self, frame: np.ndarray, output_path, fps=20.0
     ) -> cv2.VideoWriter:
+        if SAVED_VIDEOS:
+            output_path = os.path.join(SAVED_VIDEOS, output_path)
         height, width, _ = frame.shape
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec for MP4
         video_writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
